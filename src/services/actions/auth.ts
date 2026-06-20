@@ -76,3 +76,26 @@ export async function signOut() {
   await supabase.auth.signOut();
   redirect("/login");
 }
+
+export async function signInWithGoogle() {
+  const supabase = await createClient();
+
+  // Meminta URL OAuth dari Supabase
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      // Arahkan kembali ke Route Handler callback yang sudah kita buat sebelumnya
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/auth/callback`,
+    },
+  });
+
+  if (error) {
+    console.error("Google OAuth error:", error.message);
+    return { error: "Gagal menghubungkan ke Google." };
+  }
+
+  // Lakukan redirect ke halaman otentikasi Google
+  if (data.url) {
+    redirect(data.url);
+  }
+}

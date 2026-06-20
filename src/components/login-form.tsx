@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useState } from "react";
-import { signIn } from "@/services/actions/auth";
+import { signIn, signInWithGoogle } from "@/services/actions/auth";
 
 export function LoginForm({
   className,
@@ -36,6 +36,18 @@ export function LoginForm({
     const result = await signIn(formData);
 
     // Jika terjadi error dari sisi Supabase, tangkap dan tampilkan ke UI
+    if (result?.error) {
+      setError(result.error);
+      setIsLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setIsLoading(true);
+    setError(null);
+
+    const result = await signInWithGoogle();
+
     if (result?.error) {
       setError(result.error);
       setIsLoading(false);
@@ -91,9 +103,15 @@ export function LoginForm({
               </Field>
               <Field>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Memproses..." : "Masuk"}
+                  {isLoading ? "Memproses..." : "Login"}
                 </Button>
-                <Button variant="outline" type="button">
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  formNoValidate
+                  disabled={isLoading}
+                >
                   Login with Google
                 </Button>
                 <FieldDescription className="text-center">
