@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useState } from "react";
-import { signUp, signInWithGoogle } from "@/services/actions/auth";
+import { signUp } from "@/services/actions/auth";
 
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   const [error, setError] = useState<string | null>(null);
@@ -44,18 +44,6 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
     }
 
     setIsLoading(false);
-  }
-
-  async function handleGoogleSignIn() {
-    setIsLoading(true);
-    setError(null);
-
-    const result = await signInWithGoogle();
-
-    if (result?.error) {
-      setError(result.error);
-      setIsLoading(false);
-    }
   }
 
   return (
@@ -138,13 +126,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create Account"}
                 </Button>
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  formNoValidate
-                  disabled={isLoading}
-                >
+                <Button variant="outline" type="button">
                   Sign up with Google
                 </Button>
                 <FieldDescription className="px-6 text-center">

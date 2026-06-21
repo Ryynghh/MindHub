@@ -9,15 +9,15 @@ import React, {
 } from "react";
 import { FloatingHeader } from "@/components/layouts/floating-header";
 import {
-  Share,
-  Layers,
   CheckCircle2,
   Circle,
-  HelpCircle,
-  Star,
   ChevronDown,
   ChevronRight,
+  Plus,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import { saveRoadmapData } from "@/app/(dashboard)/actions/roadmap";
 
 // --- TYPE DEFINITIONS ---
 interface GanttItem {
@@ -30,11 +30,19 @@ interface GanttItem {
   children?: GanttItem[];
 }
 
+interface RoadmapViewProps {
+  workspaceId: string;
+  initialData: GanttItem[];
+}
+
 type DragMode = "move" | "resize-left" | "resize-right" | null;
 
 // --- KONFIGURASI ENGINE KALENDER ---
 const DAY_WIDTH = 32;
-const BASE_DATE = new Date("2024-05-01T00:00:00");
+// Default kalender dimulai dari hari ini agar relevan dengan project nyata
+const BASE_DATE = new Date();
+BASE_DATE.setHours(0, 0, 0, 0);
+
 const MONTH_NAMES = [
   "Jan",
   "Feb",
@@ -50,86 +58,36 @@ const MONTH_NAMES = [
   "Dec",
 ];
 
-// --- MOCK DATA ---
-const mockData: GanttItem[] = [
-  {
-    id: "1",
-    name: "Month 1 - Web Foundations",
-    progress: 0,
-    type: "parent",
-    startOffset: 2,
-    duration: 25,
-  },
-  {
-    id: "2",
-    name: "Example release 1",
-    progress: 25,
-    type: "parent",
-    startOffset: 10,
-    duration: 45,
-    children: [
-      {
-        id: "2-1",
-        name: "PROD-1 Example feature 1",
-        progress: 60,
-        type: "child",
-        startOffset: 10,
-        duration: 20,
-      },
-      {
-        id: "2-2",
-        name: "PROD-2 Example feature 2",
-        progress: 10,
-        type: "child",
-        startOffset: 15,
-        duration: 25,
-      },
-      {
-        id: "2-3",
-        name: "PROD-3 Example feature 3",
-        progress: 0,
-        type: "child",
-        startOffset: 25,
-        duration: 27,
-      },
-      {
-        id: "2-4",
-        name: "PROD-4 Example feature 4",
-        progress: 0,
-        type: "child",
-        startOffset: 35,
-        duration: 15,
-      },
-    ],
-  },
-  {
-    id: "3",
-    name: "Example release 2",
-    progress: 100,
-    type: "parent",
-    startOffset: 50,
-    duration: 30,
-  },
-];
+export default function RoadmapView({
+  workspaceId,
+  initialData,
+}: RoadmapViewProps) {
+  // 1. STATE DIKOSONGKAN (Empty State)
+  const [items, setItems] = useState<GanttItem[]>(initialData);
 
-export default function GanttDashboard() {
-  const [items, setItems] = useState<GanttItem[]>(mockData);
+  const [isSaving, setIsSaving] = useState(false);
 
+  const handleSave = async () => {
+    setIsSaving(true);
+    const result = await saveRoadmapData(workspaceId, items);
+    setIsSaving(false);
+
+    if (result.error) {
+      alert("Gagal menyimpan data!");
+    } else {
+      // (Opsional) Kamu bisa ganti alert ini dengan toast UI modern
+      console.log("Tersimpan permanen!");
+    }
+  };
   // States Interaksi
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const [isStarred, setIsStarred] = useState(false);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(
-    new Set(
-      mockData.filter((item) => item.children?.length).map((item) => item.id),
-    ),
-  );
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  // States Inline Edit untuk Nama
+  // States Inline Edit
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [editNameValue, setEditNameValue] = useState<string>("");
-
-  // States Inline Edit untuk Progress
   const [editingProgressId, setEditingProgressId] = useState<string | null>(
     null,
   );
@@ -144,9 +102,68 @@ export default function GanttDashboard() {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const progressInputRef = useRef<HTMLInputElement>(null);
 
-  // --- KALKULASI KALENDER ---
+  // --- CRUD OPERATIONS ---
+
+  // Tambah Release Baru (Parent)
+  const addParentTask = () => {
+    const newTask: GanttItem = {
+      id: crypto.randomUUID(), // Standard industri untuk UUID di client
+      name: "New Release",
+      progress: 0,
+      type: "parent",
+      startOffset: 0, // Mulai dari hari pertama
+      duration: 14, // Default durasi 2 minggu
+      children: [],
+    };
+    setItems([...items, newTask]);
+  };
+
+  // Tambah Feature Baru (Child)
+  const addChildTask = (parentId: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === parentId) {
+          const newChild: GanttItem = {
+            id: crypto.randomUUID(),
+            name: "New Feature",
+            progress: 0,
+            type: "child",
+            startOffset: item.startOffset, // Samakan start date dengan parent
+            duration: 7, // Default 1 minggu
+          };
+          // Otomatis expand parent ketika child ditambah
+          setExpandedIds((prevSet) => new Set(prevSet).add(parentId));
+          return { ...item, children: [...(item.children || []), newChild] };
+        }
+        return item;
+      }),
+    );
+  };
+
+  // Hapus Task (Parent atau Child)
+  const deleteItem = (id: string, parentId?: string) => {
+    setItems((prev) => {
+      if (parentId) {
+        // Hapus Child
+        return prev.map((item) => {
+          if (item.id === parentId) {
+            return {
+              ...item,
+              children: item.children?.filter((child) => child.id !== id),
+            };
+          }
+          return item;
+        });
+      } else {
+        // Hapus Parent (beserta semua child-nya)
+        return prev.filter((item) => item.id !== id);
+      }
+    });
+  };
+
+  // --- KALKULASI KALENDER DINAMIS ---
   const { totalDays, calendarDates, months } = useMemo(() => {
-    let maxEndDay = 60;
+    let maxEndDay = 0;
     const traverse = (list: GanttItem[]) => {
       list.forEach((item) => {
         const endDay = item.startOffset + item.duration;
@@ -156,7 +173,8 @@ export default function GanttDashboard() {
     };
     traverse(items);
 
-    const calculatedTotalDays = Math.ceil(maxEndDay) + 30;
+    // Pastikan kalender memiliki minimal 60 hari meski kosong
+    const calculatedTotalDays = Math.max(Math.ceil(maxEndDay) + 30, 60);
     const dates = Array.from({ length: calculatedTotalDays }).map((_, i) => {
       const d = new Date(BASE_DATE);
       d.setDate(d.getDate() + i);
@@ -194,10 +212,11 @@ export default function GanttDashboard() {
     };
   }, [items]);
 
-  // --- FOKUS OTOMATIS INPUT ---
+  // --- FOKUS OTOMATIS & UPDATE LOKAL ---
   useEffect(() => {
     if (editingNameId && nameInputRef.current) nameInputRef.current.focus();
   }, [editingNameId]);
+
   useEffect(() => {
     if (editingProgressId && progressInputRef.current)
       progressInputRef.current.focus();
@@ -226,7 +245,7 @@ export default function GanttDashboard() {
     });
   }, []);
 
-  // --- HANDLERS: EDIT NAMA ---
+  // --- HANDLERS: EDIT NAMA & PROGRESS (Disembunyikan untuk keringkasan logic, sama seperti sebelumnya) ---
   const startEditingName = (id: string, currentName: string) => {
     setEditingNameId(id);
     setEditNameValue(currentName);
@@ -236,38 +255,27 @@ export default function GanttDashboard() {
       updateItem(editingNameId, { name: editNameValue.trim() });
     setEditingNameId(null);
   };
-  const cancelEditingName = () => {
-    setEditingNameId(null);
-    setEditNameValue("");
-  };
-  const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") saveEditingName();
-    if (e.key === "Escape") cancelEditingName();
+    if (e.key === "Escape") setEditingNameId(null);
   };
 
-  // --- HANDLERS: EDIT PROGRESS ---
   const startEditingProgress = (id: string, currentProgress: number) => {
     setEditingProgressId(id);
     setEditProgressValue(currentProgress.toString());
   };
   const saveEditingProgress = () => {
     if (editingProgressId) {
-      // Validasi agar nilai mentok di 0 - 100
       let numValue = parseInt(editProgressValue, 10);
-      if (isNaN(numValue)) numValue = 0;
-      if (numValue < 0) numValue = 0;
+      if (isNaN(numValue) || numValue < 0) numValue = 0;
       if (numValue > 100) numValue = 100;
       updateItem(editingProgressId, { progress: numValue });
     }
     setEditingProgressId(null);
   };
-  const cancelEditingProgress = () => {
-    setEditingProgressId(null);
-    setEditProgressValue("");
-  };
-  const handleProgressKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleProgressKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") saveEditingProgress();
-    if (e.key === "Escape") cancelEditingProgress();
+    if (e.key === "Escape") setEditingProgressId(null);
   };
 
   // --- HANDLERS: DRAG ---
@@ -282,11 +290,7 @@ export default function GanttDashboard() {
     if (!timelineRef.current) return;
     setDraggingId(id);
     setDragMode(mode);
-    dragStartRef.current = {
-      x: e.clientX,
-      offset: startOffset,
-      duration: duration,
-    };
+    dragStartRef.current = { x: e.clientX, offset: startOffset, duration };
   };
 
   useEffect(() => {
@@ -348,15 +352,27 @@ export default function GanttDashboard() {
         <div className="px-6 py-4 flex flex-col gap-4 border-b border-neutral-900 bg-[#09090b]">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-semibold text-neutral-100 flex items-center gap-3 tracking-tight">
-              Make Your Own Roadmap
+              Workspace Roadmap
               <button
                 onClick={() => setIsStarred(!isStarred)}
                 className={`transition-colors ${isStarred ? "text-yellow-500" : "text-neutral-600 hover:text-neutral-400"}`}
               ></button>
             </h1>
-            <div className="flex items-center gap-2">
-              <button className="px-4 py-1.5 bg-neutral-100 text-neutral-950 hover:bg-neutral-200 transition rounded text-xs font-semibold shadow-sm">
-                Save changes
+            <div className="flex items-center gap-3">
+              {/* TOMBOL TAMBAH RELEASE UTAMA */}
+              <button
+                onClick={addParentTask}
+                className="px-4 py-1.5 flex items-center gap-2 bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600/20 border border-emerald-500/20 transition rounded text-xs font-semibold shadow-sm"
+              >
+                <Plus className="w-4 h-4" /> Add Release
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-4 py-1.5 flex items-center gap-2 bg-neutral-100 text-neutral-950 hover:bg-neutral-200 transition rounded text-xs font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {isSaving ? "Saving..." : "Save changes"}
               </button>
             </div>
           </div>
@@ -366,11 +382,26 @@ export default function GanttDashboard() {
           {/* LEFT PANEL: Data Table */}
           <div className="w-[350px] flex-shrink-0 border-r border-neutral-900 flex flex-col bg-[#09090b] z-10 shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
             <div className="flex text-[10px] text-neutral-500 border-b border-neutral-900 uppercase font-bold tracking-wider bg-neutral-950/40">
-              <div className="flex-1 p-3 pl-6">Release</div>
+              <div className="flex-1 p-3 pl-6">Release / Features</div>
               <div className="w-[80px] p-3 text-right pr-6">Progress</div>
             </div>
 
-            <div className="overflow-y-auto flex-1 divide-y divide-neutral-900/40 hide-scrollbar">
+            <div className="overflow-y-auto flex-1 divide-y divide-neutral-900/40 custom-scrollbar pb-24">
+              {/* EMPTY STATE UI */}
+              {items.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-40 text-center px-6">
+                  <div className="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center mb-3">
+                    <Plus className="w-5 h-5 text-neutral-500" />
+                  </div>
+                  <p className="text-sm font-medium text-neutral-300">
+                    No releases yet
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Click "Add Release" at the top to start planning.
+                  </p>
+                </div>
+              )}
+
               {items.map((item) => {
                 const isExpanded = expandedIds.has(item.id);
                 const hasChildren = item.children && item.children.length > 0;
@@ -394,7 +425,6 @@ export default function GanttDashboard() {
                             <Circle className="w-1.5 h-1.5 fill-neutral-700 text-transparent" />
                           )}
                         </div>
-                        {/* Nama Parent */}
                         {editingNameId === item.id ? (
                           <input
                             ref={nameInputRef}
@@ -402,7 +432,7 @@ export default function GanttDashboard() {
                             onChange={(e) => setEditNameValue(e.target.value)}
                             onBlur={saveEditingName}
                             onKeyDown={handleNameKeyDown}
-                            className="flex-1 bg-neutral-800 text-white text-xs px-2 py-0.5 rounded border border-neutral-600 focus:outline-none focus:border-neutral-400"
+                            className="flex-1 bg-neutral-800 text-white text-xs px-2 py-0.5 rounded border border-neutral-600 focus:outline-none"
                           />
                         ) : (
                           <span
@@ -410,12 +440,30 @@ export default function GanttDashboard() {
                             onDoubleClick={() =>
                               startEditingName(item.id, item.name)
                             }
-                            title="Double click to edit"
                           >
                             {item.name}
                           </span>
                         )}
+
+                        {/* HOVER ACTIONS (Add Child & Delete) */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center pr-2 gap-1">
+                          <button
+                            onClick={() => addChildTask(item.id)}
+                            title="Add Feature"
+                            className="p-1 hover:bg-neutral-700 rounded text-neutral-400 hover:text-emerald-400"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteItem(item.id)}
+                            title="Delete Release"
+                            className="p-1 hover:bg-neutral-700 rounded text-neutral-400 hover:text-red-400"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
+
                       <div className="w-[80px] px-4 text-right pr-6 text-xs flex items-center justify-end gap-1.5 font-mono text-neutral-400">
                         {item.progress > 0 && item.progress < 100 ? (
                           <Circle className="w-3 h-3 text-blue-500 fill-blue-500/20" />
@@ -424,7 +472,6 @@ export default function GanttDashboard() {
                         ) : (
                           <Circle className="w-3 h-3 text-neutral-700" />
                         )}
-                        {/* Progress Parent */}
                         {editingProgressId === item.id ? (
                           <div className="flex items-center w-12">
                             <input
@@ -448,7 +495,6 @@ export default function GanttDashboard() {
                             onDoubleClick={() =>
                               startEditingProgress(item.id, item.progress)
                             }
-                            title="Double click to edit"
                           >
                             {item.progress}%
                           </span>
@@ -461,10 +507,9 @@ export default function GanttDashboard() {
                       item.children?.map((child) => (
                         <div
                           key={child.id}
-                          className="flex h-[40px] items-center bg-neutral-950/20 hover:bg-neutral-900/30 transition-colors"
+                          className="flex h-[40px] items-center bg-neutral-950/20 hover:bg-neutral-900/30 transition-colors group"
                         >
                           <div className="flex-1 px-4 pl-12 flex items-center">
-                            {/* Nama Child */}
                             {editingNameId === child.id ? (
                               <input
                                 ref={nameInputRef}
@@ -474,21 +519,33 @@ export default function GanttDashboard() {
                                 }
                                 onBlur={saveEditingName}
                                 onKeyDown={handleNameKeyDown}
-                                className="flex-1 bg-neutral-800 text-white text-xs px-2 py-0.5 rounded border border-neutral-600 focus:outline-none focus:border-neutral-400"
+                                className="flex-1 bg-neutral-800 text-white text-xs px-2 py-0.5 rounded border border-neutral-600 focus:outline-none"
                               />
                             ) : (
                               <div
-                                className="text-xs text-neutral-400 truncate cursor-text hover:text-neutral-200 flex-1 relative"
+                                className="text-xs text-neutral-400 truncate cursor-text hover:text-neutral-200 flex-1 relative flex items-center justify-between"
                                 onDoubleClick={() =>
                                   startEditingName(child.id, child.name)
                                 }
-                                title="Double click to edit"
                               >
-                                <div className="absolute -left-3 top-1/2 w-2 h-px bg-neutral-800"></div>
-                                <div className="absolute -left-3 -top-6 bottom-1/2 w-px bg-neutral-800"></div>
-                                {child.name}
+                                <div className="flex items-center flex-1">
+                                  <div className="absolute -left-3 top-1/2 w-2 h-px bg-neutral-800"></div>
+                                  <div className="absolute -left-3 -top-6 bottom-1/2 w-px bg-neutral-800"></div>
+                                  {child.name}
+                                </div>
                               </div>
                             )}
+
+                            {/* HOVER ACTIONS (Delete Child) */}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center pr-2">
+                              <button
+                                onClick={() => deleteItem(child.id, item.id)}
+                                title="Delete Feature"
+                                className="p-1 hover:bg-neutral-700 rounded text-neutral-400 hover:text-red-400"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                           <div className="w-[80px] px-4 text-right pr-6 text-xs flex items-center justify-end gap-1.5 font-mono text-neutral-500">
                             {child.progress > 0 && child.progress < 100 ? (
@@ -498,7 +555,6 @@ export default function GanttDashboard() {
                             ) : (
                               <Circle className="w-3 h-3 text-neutral-700" />
                             )}
-                            {/* Progress Child */}
                             {editingProgressId === child.id ? (
                               <div className="flex items-center w-12">
                                 <input
@@ -524,7 +580,6 @@ export default function GanttDashboard() {
                                 onDoubleClick={() =>
                                   startEditingProgress(child.id, child.progress)
                                 }
-                                title="Double click to edit"
                               >
                                 {child.progress}%
                               </span>
@@ -600,17 +655,12 @@ export default function GanttDashboard() {
                         {/* PARENT BAR */}
                         <div className="h-[40px] flex items-center relative border-b border-neutral-900/20 group hover:bg-neutral-900/10 transition-colors">
                           <div
-                            className={`absolute h-2.5 bg-neutral-800 border border-neutral-700 rounded-md flex items-center transition-all duration-300 ease-out overflow-hidden ${
-                              draggingId === item.id && dragMode === "move"
-                                ? "shadow-[0_0_12px_rgba(255,255,255,0.15)] z-20 bg-neutral-700 border-neutral-400 !transition-none"
-                                : "hover:bg-neutral-700/50 hover:border-neutral-500"
-                            }`}
+                            className={`absolute h-2.5 bg-neutral-800 border border-neutral-700 rounded-md flex items-center transition-all duration-300 ease-out overflow-hidden ${draggingId === item.id && dragMode === "move" ? "shadow-[0_0_12px_rgba(255,255,255,0.15)] z-20 bg-neutral-700 border-neutral-400 !transition-none" : "hover:bg-neutral-700/50 hover:border-neutral-500"}`}
                             style={{
                               left: item.startOffset * DAY_WIDTH,
                               width: item.duration * DAY_WIDTH,
                             }}
                           >
-                            {/* INDIKATOR PROGRESS PUTIH DI DALAM BAR */}
                             {item.progress > 0 && (
                               <div
                                 className={`h-full bg-neutral-200 pointer-events-none transition-all duration-500 ease-out`}
@@ -664,17 +714,12 @@ export default function GanttDashboard() {
                               className="h-[40px] flex items-center relative border-b border-neutral-900/20 bg-neutral-950/5 hover:bg-neutral-900/10 transition-colors"
                             >
                               <div
-                                className={`absolute h-1.5 bg-neutral-900 border border-neutral-700 rounded-full transition-all duration-300 ease-out overflow-hidden ${
-                                  draggingId === child.id && dragMode === "move"
-                                    ? "shadow-[0_0_10px_rgba(255,255,255,0.1)] z-20 bg-neutral-600 border-neutral-300 !transition-none"
-                                    : "hover:bg-neutral-800 hover:border-neutral-400"
-                                }`}
+                                className={`absolute h-1.5 bg-neutral-900 border border-neutral-700 rounded-full transition-all duration-300 ease-out overflow-hidden ${draggingId === child.id && dragMode === "move" ? "shadow-[0_0_10px_rgba(255,255,255,0.1)] z-20 bg-neutral-600 border-neutral-300 !transition-none" : "hover:bg-neutral-800 hover:border-neutral-400"}`}
                                 style={{
                                   left: child.startOffset * DAY_WIDTH,
                                   width: child.duration * DAY_WIDTH,
                                 }}
                               >
-                                {/* INDIKATOR PROGRESS PUTIH DI DALAM CHILD BAR */}
                                 {child.progress > 0 && (
                                   <div
                                     className={`h-full bg-neutral-300 pointer-events-none transition-all duration-500 ease-out`}

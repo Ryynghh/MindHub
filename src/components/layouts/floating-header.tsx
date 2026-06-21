@@ -12,7 +12,7 @@ export function FloatingHeader() {
   const [open, setOpen] = React.useState(false);
 
   const links = [
-    { label: "Roadmap", href: "/roadmap" },
+    { label: "Workspace", href: "/workspace" },
     { label: "Chat bot", href: "/chat" },
     { label: "About", href: "#" },
   ];
