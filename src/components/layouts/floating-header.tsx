@@ -12,9 +12,12 @@ export function FloatingHeader() {
   const [open, setOpen] = React.useState(false);
 
   const links = [
+    // 👇 Penulisan href /dashboard disarankan menggunakan huruf kecil
+    { label: "Dashboard", href: "/dashboard" },
     { label: "Workspace", href: "/workspace" },
     { label: "Chat bot", href: "/chat" },
-    { label: "About", href: "#" },
+    // 👇 Kapitalisasi pada label dirapikan
+    { label: "Pricing", href: "/pricing" },
   ];
 
   return (
@@ -26,11 +29,14 @@ export function FloatingHeader() {
         "shadow-[0_10px_40px_rgba(255,255,255,0.15)]", // Shadow lebih tebal (15%) dan lebih menyebar (40px)
       )}
     >
-      <nav className="mx-auto flex items-center justify-between p-1.5">
-        {/* Logo Brand */}
-        <div className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 duration-100">
+      <nav className="mx-auto flex items-center justify-between rounded-3xl h-15 p-1.5">
+        {/* 👇 Logo Brand dibungkus dengan Link */}
+        <Link
+          href="/dashboard"
+          className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 duration-100 transition-colors"
+        >
           <p className="text-md font-mono text-base font-bold">MindHub</p>
-        </div>
+        </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden items-center gap-1 lg:flex">

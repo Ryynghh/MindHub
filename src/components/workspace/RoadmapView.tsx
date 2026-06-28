@@ -390,9 +390,6 @@ export default function RoadmapView({
               {/* EMPTY STATE UI */}
               {items.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-40 text-center px-6">
-                  <div className="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center mb-3">
-                    <Plus className="w-5 h-5 text-neutral-500" />
-                  </div>
                   <p className="text-sm font-medium text-neutral-300">
                     No releases yet
                   </p>
