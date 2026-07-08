@@ -120,7 +120,7 @@ export function LoginForm({
               </Field>
               <Field>
                 <Button type="submit" disabled={isLoading || isGoogleLoading}>
-                  {isLoading ? "Memproses..." : "Masuk"}
+                  {isLoading ? "Processing..." : "Sign in"}
                 </Button>
 
                 {/* Tombol Login Google yang sudah diaktifkan */}
@@ -130,7 +130,7 @@ export function LoginForm({
                   onClick={handleGoogleLogin}
                   disabled={isLoading || isGoogleLoading}
                 >
-                  {isGoogleLoading ? "Memproses..." : "Login with Google"}
+                  {isGoogleLoading ? "Processing..." : "Sign in with Google"}
                 </Button>
 
                 <FieldDescription className="text-center">

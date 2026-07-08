@@ -8,6 +8,7 @@ import React, {
   useMemo,
 } from "react";
 import { FloatingHeader } from "@/components/layouts/floating-header";
+import Link from "next/link";
 import {
   CheckCircle2,
   Circle,
@@ -16,8 +17,12 @@ import {
   Plus,
   Trash2,
   Loader2,
+  ArrowLeft,
+  CalendarPlus,
 } from "lucide-react";
+import { toast } from "sonner";
 import { saveRoadmapData } from "@/app/(dashboard)/actions/roadmap";
+import { WorkspaceMember, MembersGroup } from "./members-group";
 
 // --- TYPE DEFINITIONS ---
 interface GanttItem {
@@ -33,6 +38,7 @@ interface GanttItem {
 interface RoadmapViewProps {
   workspaceId: string;
   initialData: GanttItem[];
+  members?: WorkspaceMember[];
 }
 
 type DragMode = "move" | "resize-left" | "resize-right" | null;
@@ -61,6 +67,7 @@ const MONTH_NAMES = [
 export default function RoadmapView({
   workspaceId,
   initialData,
+  members = [],
 }: RoadmapViewProps) {
   // 1. STATE DIKOSONGKAN (Empty State)
   const [items, setItems] = useState<GanttItem[]>(initialData);
@@ -79,6 +86,74 @@ export default function RoadmapView({
       console.log("Tersimpan permanen!");
     }
   };
+  // --- GOOGLE CALENDAR EXPORT ---
+  const generateICSDate = (date: Date) => {
+    return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  };
+
+  const exportToCalendar = () => {
+    if (items.length === 0) {
+      toast.error("No tasks to export. Add some releases first!");
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let events = '';
+    const allTasks: { name: string; startOffset: number; duration: number }[] = [];
+
+    // Flatten all parent + child items
+    items.forEach((item) => {
+      allTasks.push({ name: item.name, startOffset: item.startOffset, duration: item.duration });
+      if (item.children) {
+        item.children.forEach((child) => {
+          allTasks.push({ name: child.name, startOffset: child.startOffset, duration: child.duration });
+        });
+      }
+    });
+
+    allTasks.forEach((task) => {
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() + Math.round(task.startOffset));
+      
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + Math.round(task.duration));
+
+      events += `BEGIN:VEVENT\n`;
+      events += `DTSTART;VALUE=DATE:${startDate.toISOString().split('T')[0].replace(/-/g, '')}\n`;
+      events += `DTEND;VALUE=DATE:${endDate.toISOString().split('T')[0].replace(/-/g, '')}\n`;
+      events += `SUMMARY:${task.name}\n`;
+      events += `DESCRIPTION:MindHub Roadmap Task\n`;
+      events += `STATUS:CONFIRMED\n`;
+      events += `UID:${crypto.randomUUID()}@mindhub\n`;
+      events += `END:VEVENT\n`;
+    });
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//MindHub//Roadmap//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      events.trim(),
+      'END:VCALENDAR'
+    ].join('\n');
+
+    // Download file .ics
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'mindhub-roadmap.ics';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`${allTasks.length} tasks exported! Open the downloaded .ics file to import into Google Calendar.`);
+  };
+
   // States Interaksi
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
@@ -351,20 +426,37 @@ export default function RoadmapView({
       <main className="flex-1 flex flex-col mt-7 overflow-hidden animate-in fade-in duration-300">
         <div className="px-6 py-4 flex flex-col gap-4 border-b border-neutral-900 bg-[#09090b]">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-semibold text-neutral-100 flex items-center gap-3 tracking-tight">
-              Workspace Roadmap
-              <button
-                onClick={() => setIsStarred(!isStarred)}
-                className={`transition-colors ${isStarred ? "text-yellow-500" : "text-neutral-600 hover:text-neutral-400"}`}
-              ></button>
-            </h1>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/workspace"
+                title="Back to Workspace List"
+                className="p-1.5 hover:bg-neutral-800 rounded-md text-neutral-400 hover:text-neutral-200 transition"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <h1 className="text-2xl font-semibold text-neutral-100 flex items-center gap-3 tracking-tight">
+                Workspace Roadmap
+                <button
+                  onClick={() => setIsStarred(!isStarred)}
+                  className={`transition-colors ${isStarred ? "text-yellow-500" : "text-neutral-600 hover:text-neutral-400"}`}
+                ></button>
+              </h1>
+            </div>
             <div className="flex items-center gap-3">
+              <MembersGroup members={members} workspaceId={workspaceId} />
               {/* TOMBOL TAMBAH RELEASE UTAMA */}
               <button
                 onClick={addParentTask}
                 className="px-4 py-1.5 flex items-center gap-2 bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600/20 border border-emerald-500/20 transition rounded text-xs font-semibold shadow-sm"
               >
                 <Plus className="w-4 h-4" /> Add Release
+              </button>
+              <button
+                onClick={exportToCalendar}
+                title="Export tasks to Google Calendar"
+                className="px-4 py-1.5 flex items-center gap-2 bg-blue-600/10 text-blue-400 hover:bg-blue-600/20 border border-blue-500/20 transition rounded text-xs font-semibold shadow-sm"
+              >
+                <CalendarPlus className="w-4 h-4" /> Sync to Calendar
               </button>
               <button
                 onClick={handleSave}

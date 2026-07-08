@@ -33,33 +33,17 @@ export const pricingTiers: PricingTier[] = [
   {
     id: "plus",
     name: "Plus",
-    description: "Keep chatting with expanded access",
+    description: "Unlock full power for your learning journey",
     price: "75,000",
-    buttonText: "Get Go ↗",
-    buttonAction: "/checkout/go",
+    buttonText: "Get Plus ↗",
+    buttonAction: "/checkout/plus",
     highlight: "Everything in Free and:",
     features: [
       { text: "Faster AI Model response time", included: true },
-      { text: "Up to 10 Roadmaps & Dashboards", included: true },
+      { text: "Unlimited Roadmaps & Dashboards", included: true },
+      { text: "Access all Learning Templates", included: true },
       { text: "More daily AI messages", included: true },
       { text: "Priority queue during peak hours", included: true },
-    ],
-  },
-
-  {
-    id: "pro",
-    name: "Pro",
-    description: "Maximize your productivity",
-    price: "200,000",
-    buttonText: "Get Pro ↗",
-    buttonAction: "/checkout/pro",
-    highlight: "Everything in Plus and:",
-    features: [
-      { text: "Maximum AI Reasoning & Capabilities", included: true },
-      { text: "Unlimited Roadmaps & Dashboards", included: true },
-      { text: "Highest priority AI processing", included: true },
-      { text: "Dedicated account manager", included: true },
-      { text: "Custom API Access", included: true },
     ],
   },
 ];

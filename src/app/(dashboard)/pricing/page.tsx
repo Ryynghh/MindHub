@@ -19,9 +19,9 @@ export default function PricingPage() {
       <main className="flex-1 flex flex-col justify-center w-full max-w-6xl mx-auto px-6 pt-32 pb-20">
         <div className="flex flex-col items-center w-full">
           {/* Header Text */}
-          <div className="text-center max-w-2xl mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="text-center max-w-2xl mb-16 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-1000 fill-mode-both">
             <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-4">
-              Upgrade your intelligence.
+              Upgrade your intelligence
             </h1>
             <p className="text-lg text-neutral-400">
               Get lightning-fast AI models and unlock more roadmap & dashboard
@@ -29,8 +29,8 @@ export default function PricingPage() {
             </p>
           </div>
 
-          {/* Pricing Grid (Untuk 3 Kartu) */}
-          <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-1000 delay-150">
+          {/* Pricing Grid (Untuk 2 Kartu) */}
+          <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both">
             {pricingTiers.map((tier) => (
               <PricingCard key={tier.id} tier={tier} />
             ))}

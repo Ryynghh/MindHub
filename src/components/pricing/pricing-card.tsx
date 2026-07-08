@@ -2,16 +2,71 @@
 
 import React from "react";
 import Link from "next/link";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, Loader2 } from "lucide-react";
+import Script from "next/script";
 import { PricingTier } from "@/config/pricing-data";
+import { createSnapToken } from "@/app/(dashboard)/actions/checkout";
+
+// Supaya Typescript mengenali objek window.snap dari Midtrans
+declare global {
+  interface Window {
+    snap: any;
+  }
+}
 
 interface PricingCardProps {
   tier: PricingTier;
 }
 
 export function PricingCard({ tier }: PricingCardProps) {
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const handleCheckout = async (e: React.MouseEvent) => {
+    // Jika paket gratis, biarkan link berjalan normal (navigasi ke buttonAction)
+    if (tier.id === "free") return;
+    
+    e.preventDefault(); // Cegah pindah halaman
+    setIsLoading(true);
+
+    // Panggil backend untuk dapat token pembayaran
+    const result = await createSnapToken(tier.id, tier.price);
+    setIsLoading(false);
+
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+
+    // Panggil pop-up Snap Midtrans
+    if (result.token && window.snap) {
+      window.snap.pay(result.token, {
+        onSuccess: function () {
+          alert("Payment successful!");
+          window.location.reload();
+        },
+        onPending: function () {
+          alert("Waiting for your payment to be completed.");
+        },
+        onError: function () {
+          alert("Payment failed!");
+        },
+        onClose: function () {
+          console.log("Customer closed the popup without finishing the payment");
+        },
+      });
+    } else {
+      alert("Payment script failed to load. Please refresh the page.");
+    }
+  };
+
   return (
-    <div className="flex flex-col p-6 sm:p-8 rounded-2xl bg-neutral-900/50 border border-neutral-800 transition-all hover:border-neutral-700">
+    <>
+      <Script
+        src="https://app.sandbox.midtrans.com/snap/snap.js"
+        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+        strategy="lazyOnload"
+      />
+      <div className="flex flex-col p-6 sm:p-8 rounded-2xl bg-neutral-900/50 border border-neutral-800 transition-all hover:border-neutral-700">
       {/* Header Section */}
       <div className="mb-8">
         <h3 className="text-2xl font-semibold text-white mb-2">{tier.name}</h3>
@@ -30,9 +85,10 @@ export function PricingCard({ tier }: PricingCardProps) {
       {/* CTA Button */}
       <Link
         href={tier.buttonAction}
-        className="w-full py-2.5 px-4 bg-white hover:bg-neutral-200 text-neutral-950 font-medium rounded-full text-center transition-colors mb-8"
+        onClick={handleCheckout}
+        className={`w-full py-2.5 px-4 bg-white hover:bg-neutral-200 text-neutral-950 font-medium rounded-full flex items-center justify-center transition-colors mb-8 ${isLoading ? 'opacity-70 pointer-events-none' : ''}`}
       >
-        {tier.buttonText}
+        {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : tier.buttonText}
       </Link>
 
       {/* Features List */}
@@ -57,5 +113,6 @@ export function PricingCard({ tier }: PricingCardProps) {
         </ul>
       </div>
     </div>
+    </>
   );
 }

@@ -1,13 +1,56 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Users,
   MoreVertical,
   LayoutDashboard,
   Map as MapIcon,
+  Edit2,
+  Trash2,
+  Loader2, // Tambahan icon spinner untuk loading
+  UserPlus, // Icon untuk invite
+  Copy, // Icon untuk copy link
+  Check, // Icon untuk feedback copy
 } from "lucide-react";
+
+// Import komponen DropdownMenu dari Shadcn UI
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Tambahan: Import komponen Modal dari Shadcn UI
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+// Tambahan: Import Server Actions (Pastikan path ini sesuai dengan file actions kamu)
+import {
+  deleteWorkspace,
+  updateWorkspace,
+} from "@/app/(dashboard)/actions/workspace";
 
 // --- FUNGSI BANTUAN FORMAT TANGGAL ---
 function timeAgo(dateString: string) {
@@ -80,73 +123,296 @@ export function WorkspaceCard({
   workspace: any;
   memberCount: number;
 }) {
-  // Sesuai PRD: Arahkan user ke halaman project saat diklik
-  const destination =
-    workspace.type === "roadmap" ? `/roadmap` : `/dashboard/${workspace.id}`;
+  // --- TAMBAHAN LOGIC: STATE MANAGEMENT ---
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const [editName, setEditName] = useState(workspace.name);
+  const [editDescription, setEditDescription] = useState(
+    workspace.description || "",
+  );
+
+  // --- TAMBAHAN LOGIC: EKSEKUSI SERVER ACTIONS ---
+  const executeDelete = async () => {
+    setIsPending(true);
+    const result = await deleteWorkspace(workspace.id);
+    setIsPending(false);
+
+    if (result?.error) {
+      alert(result.error);
+    } else {
+      setShowDeleteModal(false);
+    }
+  };
+
+  const executeEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim()) return;
+
+    setIsPending(true);
+    const result = await updateWorkspace(
+      workspace.id,
+      editName,
+      editDescription,
+    );
+    setIsPending(false);
+
+    if (result?.error) {
+      alert(result.error);
+    } else {
+      setShowEditModal(false);
+    }
+  };
+
+  // Fungsi untuk mengcopy link invite
+  const copyInviteLink = () => {
+    // Generate URL invite, misalnya menggunakan origin dari window
+    const inviteLink = `${window.location.origin}/invite/${workspace.id}`;
+    navigator.clipboard.writeText(inviteLink);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
 
   return (
-    <div className="group flex flex-col bg-neutral-950/30 rounded-xl border border-neutral-800/60 hover:border-neutral-600 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(255,255,255,0.04)] overflow-hidden">
-      {/* THUMBNAIL (Bisa diklik untuk buka project) */}
-      <Link
-        href={`/workspace/${workspace.id}`}
-        className="h-36 w-full bg-neutral-900/50 border-b border-neutral-800/60 relative overflow-hidden group-hover:bg-neutral-900/80 transition-colors block cursor-pointer"
-      >
-        <ThumbnailWireframe type={workspace.type} />
+    <>
+      <div className="group flex flex-col bg-neutral-950/30 rounded-xl border border-neutral-800/60 hover:border-neutral-600 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(255,255,255,0.04)] overflow-hidden">
+        {/* THUMBNAIL (Bisa diklik untuk buka project) */}
+        <Link
+          href={`/workspace/${workspace.id}`}
+          className="h-36 w-full bg-neutral-900/50 border-b border-neutral-800/60 relative overflow-hidden group-hover:bg-neutral-900/80 transition-colors block cursor-pointer"
+        >
+          <ThumbnailWireframe type={workspace.type} />
 
-        {/* Badge Tipe Template */}
-        <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md border border-neutral-800 px-2 py-1 rounded text-[10px] text-neutral-300 font-medium flex items-center gap-1.5 uppercase tracking-wider shadow-sm">
-          {workspace.type === "dashboard" ? (
-            <LayoutDashboard className="w-3 h-3 text-blue-400" />
-          ) : (
-            <MapIcon className="w-3 h-3 text-amber-400" />
-          )}
-          {workspace.type}
-        </div>
-      </Link>
+          {/* Badge Tipe Template */}
+          <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md border border-neutral-800 px-2 py-1 rounded text-[10px] text-neutral-300 font-medium flex items-center gap-1.5 uppercase tracking-wider shadow-sm">
+            {workspace.type === "dashboard" ? (
+              <LayoutDashboard className="w-3 h-3 text-blue-400" />
+            ) : (
+              <MapIcon className="w-3 h-3 text-amber-400" />
+            )}
+            {workspace.type}
+          </div>
+        </Link>
 
-      {/* DETAIL PROJECT */}
-      <div className="p-4 flex flex-col gap-2">
-        <div className="flex justify-between items-start gap-2">
-          <div>
-            <Link
-              href={`/workspace/${workspace.id}`}
-              className="font-semibold text-sm text-neutral-200 group-hover:text-white truncate block cursor-pointer"
-              title={workspace.name}
-            >
-              {workspace.name}
-            </Link>
-            {workspace.description && (
-              <p
-                className="text-xs text-neutral-500 mt-0.5 line-clamp-1 truncate"
-                title={workspace.description}
+        {/* DETAIL PROJECT */}
+        <div className="p-4 flex flex-col gap-2">
+          <div className="flex justify-between items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <Link
+                href={`/workspace/${workspace.id}`}
+                className="font-semibold text-sm text-neutral-200 group-hover:text-white truncate block cursor-pointer"
+                title={workspace.name}
               >
-                {workspace.description}
+                {workspace.name}
+              </Link>
+              {workspace.description && (
+                <p
+                  className="text-xs text-neutral-500 mt-0.5 line-clamp-1 truncate"
+                  title={workspace.description}
+                >
+                  {workspace.description}
+                </p>
+              )}
+            </div>
+
+            {/* DROPDOWN MENU AKSI */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="text-neutral-500 hover:text-white hover:bg-neutral-800 p-1 rounded transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-neutral-400">
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                align="end"
+                className="w-48 bg-neutral-950 border-neutral-800 text-neutral-300 shadow-xl"
+              >
+                {/* 
+                  Perubahan Logic: 
+                  Gunakan onSelect untuk men-trigger state Modal. 
+                  e.preventDefault() diperlukan agar dropdown tidak bentrok dengan fokus Modal.
+                */}
+                <DropdownMenuItem
+                  onSelect={() => setShowEditModal(true)}
+                  className="cursor-pointer hover:bg-neutral-900 hover:text-white focus:bg-neutral-900 focus:text-white transition-colors"
+                >
+                  <Edit2 className="w-4 h-4 mr-2 text-neutral-400" />
+                  <span>Edit Workspace</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onSelect={() => setShowInviteModal(true)}
+                  className="cursor-pointer hover:bg-neutral-900 hover:text-white focus:bg-neutral-900 focus:text-white transition-colors"
+                >
+                  <UserPlus className="w-4 h-4 mr-2 text-blue-400" />
+                  <span>Invite Members</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator className="bg-neutral-800/60" />
+
+                <DropdownMenuItem
+                  onSelect={() => setShowDeleteModal(true)}
+                  className="cursor-pointer text-red-400 hover:bg-red-950/50 hover:text-red-300 focus:bg-red-950/50 focus:text-red-300 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  <span>Delete Workspace</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* METADATA BAWAH (Jumlah Member & Last Updated) */}
+          <div className="flex justify-between items-center mt-2 pt-3 border-t border-neutral-800/50">
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+              <Users className="w-3.5 h-3.5" />
+              <span>
+                {memberCount || 1} {memberCount === 1 ? "member" : "members"}
+              </span>
+            </div>
+            <span
+              className="text-[11px] text-neutral-600 font-medium"
+              title={`Created: ${new Date(workspace.created_at).toLocaleDateString()}`}
+            >
+              Updated {timeAgo(workspace.updated_at)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* --- TAMBAHAN UI: MODALS --- */}
+
+      {/* Modal Edit */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="bg-neutral-950 border-neutral-800 text-neutral-200">
+          <DialogHeader>
+            <DialogTitle>Edit Workspace</DialogTitle>
+            <DialogDescription className="text-neutral-500">
+              Ubah detail nama atau deskripsi dari workspace ini.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={executeEdit} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-neutral-300">
+                Nama Workspace
+              </label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Misal: Proyek Alpha"
+                className="bg-neutral-900 border-neutral-800 text-white"
+                required
+                disabled={isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-neutral-300">
+                Deskripsi (Opsional)
+              </label>
+              <Input
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Tambahkan deskripsi singkat..."
+                className="bg-neutral-900 border-neutral-800 text-white"
+                disabled={isPending}
+              />
+            </div>
+            <DialogFooter className="pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowEditModal(false)}
+                disabled={isPending}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={isPending || !editName.trim()}>
+                {isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                Simpan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Invite Link */}
+      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+        <DialogContent className="bg-neutral-950 border-neutral-800 text-neutral-200">
+          <DialogHeader>
+            <DialogTitle>Invite Members</DialogTitle>
+            <DialogDescription className="text-neutral-500">
+              Bagikan link ini kepada tim Anda agar mereka dapat bergabung ke 
+              <strong className="text-neutral-300 ml-1">{workspace.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-2">
+              <Input
+                readOnly
+                value={typeof window !== 'undefined' ? `${window.location.origin}/invite/${workspace.id}` : ''}
+                className="bg-neutral-900 border-neutral-800 text-neutral-400 focus-visible:ring-0"
+              />
+              <Button 
+                onClick={copyInviteLink}
+                className="shrink-0 bg-neutral-800 hover:bg-neutral-700 text-white"
+              >
+                {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </Button>
+            </div>
+            {isCopied && (
+              <p className="text-xs text-emerald-400 animate-in fade-in slide-in-from-top-1">
+                Link copied to clipboard!
               </p>
             )}
           </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowInviteModal(false)}
+            >
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          {/* Sesuai PRD: Menu Aksi (Edit/Delete Project) */}
-          <button className="text-neutral-500 hover:text-white hover:bg-neutral-800 p-1 rounded transition-colors shrink-0">
-            <MoreVertical className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* METADATA BAWAH (Jumlah Member & Last Updated) */}
-        <div className="flex justify-between items-center mt-2 pt-3 border-t border-neutral-800/50">
-          <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
-            <Users className="w-3.5 h-3.5" />
-            <span>
-              {memberCount || 1} {memberCount === 1 ? "member" : "members"}
-            </span>
-          </div>
-          <span
-            className="text-[11px] text-neutral-600 font-medium"
-            title={`Created: ${new Date(workspace.created_at).toLocaleDateString()}`}
-          >
-            Updated {timeAgo(workspace.updated_at)}
-          </span>
-        </div>
-      </div>
-    </div>
+      {/* Modal Delete Confirmation */}
+      <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <AlertDialogContent className="bg-neutral-950 border-neutral-800 text-neutral-200">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-400">
+              Hapus Workspace?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-neutral-500">
+              Tindakan ini tidak dapat dibatalkan. Workspace{" "}
+              <strong className="text-neutral-300">{workspace.name}</strong>{" "}
+              beserta seluruh isinya akan dihapus secara permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="bg-transparent border-neutral-800 hover:bg-neutral-900 text-neutral-300"
+              disabled={isPending}
+            >
+              Batal
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={executeDelete}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : null}
+              Ya, Hapus
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

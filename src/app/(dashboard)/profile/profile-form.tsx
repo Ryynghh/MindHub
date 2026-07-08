@@ -60,11 +60,11 @@ export default function ProfileForm({ user, profile }: { user: any, profile: any
       if (updateError) throw updateError;
 
       setAvatarUrl(publicUrl);
-      toast.success("Foto profil berhasil diperbarui!");
+      toast.success("Profile picture updated successfully!");
       router.refresh(); // 🔥 Refresh data Next.js server
     } catch (error: any) {
       console.error(error);
-      toast.error("Gagal mengunggah foto: " + (error.message || "Pastikan RLS Policy Storage sudah diaktifkan"));
+      toast.error("Failed to upload picture: " + (error.message || "Make sure RLS Policy Storage is enabled"));
     } finally {
       setIsUploading(false);
     }
@@ -89,10 +89,10 @@ export default function ProfileForm({ user, profile }: { user: any, profile: any
 
       if (error) throw error;
       
-      toast.success("Profil berhasil disimpan!");
+      toast.success("Profile saved successfully!");
       router.refresh(); // 🔥 Refresh data agar perubahan permanen menetap
     } catch (error: any) {
-      toast.error("Gagal menyimpan profil: " + error.message);
+      toast.error("Failed to save profile: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -132,8 +132,8 @@ export default function ProfileForm({ user, profile }: { user: any, profile: any
           />
         </div>
         <div className="text-center md:text-left">
-          <h3 className="font-semibold text-lg">Foto Profil</h3>
-          <p className="text-sm text-muted-foreground mb-3">Rekomendasi ukuran 256x256px. Format JPG, PNG.</p>
+          <h3 className="font-semibold text-lg">Profile Picture</h3>
+          <p className="text-sm text-muted-foreground mb-3">Recommended size 256x256px. JPG, PNG formats.</p>
           <Button 
             type="button"
             variant="outline" 
@@ -141,7 +141,7 @@ export default function ProfileForm({ user, profile }: { user: any, profile: any
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
           >
-            {isUploading ? "Mengunggah..." : "Ganti Foto"}
+            {isUploading ? "Uploading..." : "Change Picture"}
           </Button>
         </div>
       </div>
@@ -149,24 +149,24 @@ export default function ProfileForm({ user, profile }: { user: any, profile: any
       {/* BAGIAN FORM DATA */}
       <form onSubmit={handleSaveProfile} className="space-y-5">
         <div className="grid gap-2">
-          <label className="text-sm font-medium">Email Akun</label>
+          <label className="text-sm font-medium">Account Email</label>
           <input 
             type="email" 
             value={userEmail} 
             disabled
             className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
           />
-          <p className="text-xs text-muted-foreground">Email otomatis terhubung dengan sistem login Anda.</p>
+          <p className="text-xs text-muted-foreground">Email is automatically connected to your login.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="grid gap-2">
-            <label className="text-sm font-medium">Nama Lengkap</label>
+            <label className="text-sm font-medium">Full Name</label>
             <input 
               type="text" 
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Masukkan nama lengkapmu"
+              placeholder="Enter your full name"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
@@ -177,18 +177,18 @@ export default function ProfileForm({ user, profile }: { user: any, profile: any
               type="text" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="contoh: joko_susilo"
+              placeholder="e.g., john_doe"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium">Bio (Tentang Saya)</label>
+          <label className="text-sm font-medium">Bio (About Me)</label>
           <textarea 
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            placeholder="Tulis sedikit tentang dirimu..."
+            placeholder="Write a little bit about yourself..."
             rows={4}
             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
@@ -198,10 +198,10 @@ export default function ProfileForm({ user, profile }: { user: any, profile: any
           <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 size-4 animate-spin" /> Menyimpan...
+                <Loader2 className="mr-2 size-4 animate-spin" /> Saving...
               </>
             ) : (
-              "Simpan Perubahan"
+              "Save Changes"
             )}
           </Button>
         </div>

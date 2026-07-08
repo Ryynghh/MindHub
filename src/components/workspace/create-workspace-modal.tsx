@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createWorkspace } from "@/app/(dashboard)/actions/workspace";
-import { Plus, LayoutDashboard, Map, Loader2 } from "lucide-react";
+import { Plus, LayoutDashboard, Map, Loader2, Brain } from "lucide-react";
 // Asumsikan kamu menggunakan Sonner atau Shadcn Toast
 import { toast } from "sonner";
 
@@ -119,12 +119,12 @@ export function CreateWorkspaceModal() {
                     onClick={() => setTemplate("dashboard")}
                     className={`cursor-pointer rounded-lg border p-4 transition-all ${template === "dashboard" ? "border-white bg-neutral-800" : "border-neutral-800 bg-neutral-950 hover:bg-neutral-900"}`}
                   >
-                    <LayoutDashboard
+                    <Brain
                       className={`mb-2 h-6 w-6 ${template === "dashboard" ? "text-white" : "text-neutral-500"}`}
                     />
-                    <p className="text-sm font-medium text-white">Dashboard</p>
+                    <p className="text-sm font-medium text-white">Learning Space</p>
                     <p className="text-[10px] text-neutral-500 mt-1">
-                      Data visualization layout
+                      Fokus & kelola materi belajar
                     </p>
                   </div>
                   <div

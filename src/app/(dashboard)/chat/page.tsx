@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FloatingHeader } from "@/components/layouts/floating-header";
 import { Send, Bot, User, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 // Tipe data untuk membedakan pesan pengguna dan AI
 type Message = {
@@ -12,6 +14,7 @@ type Message = {
 };
 
 export default function ChatAIPage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome-msg",
@@ -61,7 +64,7 @@ export default function ChatAIPage() {
         }),
       });
 
-      if (!response.ok) throw new Error("Gagal mengambil respon");
+      if (!response.ok) throw new Error("Failed to fetch response");
 
       const data = await response.json();
 
@@ -72,6 +75,12 @@ export default function ChatAIPage() {
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+
+      if (data.redirectUrl) {
+        toast.success("Workspace created automatically by AI!");
+        router.refresh();
+        router.push(data.redirectUrl);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       // Fallback pesan error ke UI
@@ -80,7 +89,7 @@ export default function ChatAIPage() {
         {
           id: Date.now().toString(),
           role: "ai",
-          content: "Maaf, koneksi ke server AI terputus. Silakan coba lagi.",
+          content: "Sorry, connection to the AI server was lost. Please try again.",
         },
       ]);
     } finally {
