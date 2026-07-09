@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         // CATATAN: Pastikan di tabel public."user" milikmu sudah ada kolom bernama "plan"
         const { error } = await supabaseAdmin
           .from("user")
-          .update({ plan: tierId }) // Ubah paket jadi "pro" atau "plus"
+          .update({ subscription_tier: tierId }) // Ubah paket jadi "pro" atau "plus"
           .eq("user_id", userId);
 
         if (error) {

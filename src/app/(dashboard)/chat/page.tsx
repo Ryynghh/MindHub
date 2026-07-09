@@ -2,9 +2,11 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { FloatingHeader } from "@/components/layouts/floating-header";
-import { Send, Bot, User, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, Trash2, BookOpen, Map } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+
+const MAX_CHARS = 1000;
 
 // Tipe data untuk membedakan pesan pengguna dan AI
 type Message = {
@@ -39,12 +41,13 @@ export default function ChatAIPage() {
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || isLoading) return;
+    const trimmed = input.trim();
+    if (!trimmed || isLoading || trimmed.length > MAX_CHARS) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input.trim(),
+      content: trimmed,
     };
 
     // Tambahkan pesan user ke UI seketika
@@ -83,13 +86,12 @@ export default function ChatAIPage() {
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      // Fallback pesan error ke UI
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
           role: "ai",
-          content: "Sorry, connection to the AI server was lost. Please try again.",
+          content: "Maaf, koneksi ke server AI terputus. Silakan coba lagi ya. 😊",
         },
       ]);
     } finally {
@@ -130,6 +132,18 @@ export default function ChatAIPage() {
           >
             <Trash2 className="w-4 h-4" />
           </button>
+        </div>
+        {/* Scope indicator */}
+        <div className="flex items-center gap-2 pb-3 pt-1">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <BookOpen className="w-3 h-3 text-emerald-400" />
+            <span className="text-[10px] font-semibold text-emerald-400">Pembelajaran</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+            <Map className="w-3 h-3 text-blue-400" />
+            <span className="text-[10px] font-semibold text-blue-400">Roadmap</span>
+          </div>
+          <span className="text-[10px] text-neutral-600 ml-1">Megi hanya membahas topik ini</span>
         </div>
 
         {/* Area Percakapan (Scrollable) */}
@@ -188,26 +202,46 @@ export default function ChatAIPage() {
         <div className="pt-4 shrink-0">
           <form
             onSubmit={handleSendMessage}
-            className="relative flex items-center bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden focus-within:ring-1 focus-within:ring-neutral-700 transition-all shadow-lg"
+            className="relative flex items-end bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden focus-within:ring-1 focus-within:ring-neutral-700 transition-all shadow-lg"
           >
-            <input
-              type="text"
+            <textarea
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Tanyakan sesuatu pada Megi..."
-              className="flex-1 bg-transparent px-5 py-4 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+              onChange={(e) => {
+                if (e.target.value.length <= MAX_CHARS) {
+                  setInput(e.target.value);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              placeholder="Tanya seputar pembelajaran atau buat roadmap belajar..."
+              className="flex-1 bg-transparent px-5 py-4 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none resize-none min-h-[52px] max-h-[120px]"
               disabled={isLoading}
+              rows={1}
             />
-            <button
-              type="submit"
-              disabled={!input.trim() || isLoading}
-              className="p-3 mr-2 bg-neutral-100 text-neutral-950 hover:bg-neutral-300 disabled:opacity-50 disabled:hover:bg-neutral-100 rounded-lg transition-colors flex items-center justify-center"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2 pr-2 pb-3">
+              {input.length > 0 && (
+                <span className={`text-[10px] font-mono tabular-nums transition-colors ${
+                  input.length > MAX_CHARS * 0.9 ? 'text-red-400' :
+                  input.length > MAX_CHARS * 0.7 ? 'text-amber-500' : 'text-neutral-600'
+                }`}>
+                  {input.length}/{MAX_CHARS}
+                </span>
+              )}
+              <button
+                type="submit"
+                disabled={!input.trim() || isLoading || input.length > MAX_CHARS}
+                className="p-3 bg-neutral-100 text-neutral-950 hover:bg-neutral-300 disabled:opacity-50 disabled:hover:bg-neutral-100 rounded-lg transition-colors flex items-center justify-center"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
           </form>
           <p className="text-center text-[10px] text-neutral-600 mt-3 font-medium">
-            AI dapat membuat kesalahan. Harap periksa kembali informasi penting.
+            Megi AI khusus membahas pembelajaran & roadmap belajar. Tekan Shift+Enter untuk baris baru.
           </p>
         </div>
       </main>

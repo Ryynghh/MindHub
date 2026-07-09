@@ -15,14 +15,17 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
+  Minus,
   Trash2,
   Loader2,
   ArrowLeft,
   CalendarPlus,
+  BookOpenCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { saveRoadmapData } from "@/app/(dashboard)/actions/roadmap";
 import { WorkspaceMember, MembersGroup } from "./members-group";
+import TaskMaterialPanel from "./TaskMaterialPanel";
 
 // --- TYPE DEFINITIONS ---
 interface GanttItem {
@@ -93,7 +96,7 @@ export default function RoadmapView({
 
   const exportToCalendar = () => {
     if (items.length === 0) {
-      toast.error("No tasks to export. Add some releases first!");
+      toast.error("No curriculum to export. Add some curriculum first!");
       return;
     }
 
@@ -160,13 +163,24 @@ export default function RoadmapView({
   const [isStarred, setIsStarred] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
+  // States Material Panel
+  const [materialPanelOpen, setMaterialPanelOpen] = useState(false);
+  const [selectedTaskName, setSelectedTaskName] = useState("");
+  const [selectedParentName, setSelectedParentName] = useState<string | undefined>(undefined);
+
+  const openMaterialPanel = (taskName: string, parentName?: string) => {
+    setSelectedTaskName(taskName);
+    setSelectedParentName(parentName);
+    setMaterialPanelOpen(true);
+  };
+
   // States Inline Edit
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [editNameValue, setEditNameValue] = useState<string>("");
-  const [editingProgressId, setEditingProgressId] = useState<string | null>(
-    null,
-  );
-  const [editProgressValue, setEditProgressValue] = useState<string>("");
+
+  // States Progress Popover
+  const [progressPopoverId, setProgressPopoverId] = useState<string | null>(null);
+  const [progressPopoverPos, setProgressPopoverPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
   const dragStartRef = useRef<{
     x: number;
@@ -175,7 +189,6 @@ export default function RoadmapView({
   } | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
-  const progressInputRef = useRef<HTMLInputElement>(null);
 
   // --- CRUD OPERATIONS ---
 
@@ -183,7 +196,7 @@ export default function RoadmapView({
   const addParentTask = () => {
     const newTask: GanttItem = {
       id: crypto.randomUUID(), // Standard industri untuk UUID di client
-      name: "New Release",
+      name: "New Curriculum",
       progress: 0,
       type: "parent",
       startOffset: 0, // Mulai dari hari pertama
@@ -200,7 +213,7 @@ export default function RoadmapView({
         if (item.id === parentId) {
           const newChild: GanttItem = {
             id: crypto.randomUUID(),
-            name: "New Feature",
+            name: "New Topic",
             progress: 0,
             type: "child",
             startOffset: item.startOffset, // Samakan start date dengan parent
@@ -292,10 +305,19 @@ export default function RoadmapView({
     if (editingNameId && nameInputRef.current) nameInputRef.current.focus();
   }, [editingNameId]);
 
+  // Close progress popover on outside click
   useEffect(() => {
-    if (editingProgressId && progressInputRef.current)
-      progressInputRef.current.focus();
-  }, [editingProgressId]);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (progressPopoverId) {
+        const popover = document.getElementById('progress-popover');
+        if (popover && !popover.contains(e.target as Node)) {
+          setProgressPopoverId(null);
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [progressPopoverId]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -335,22 +357,40 @@ export default function RoadmapView({
     if (e.key === "Escape") setEditingNameId(null);
   };
 
-  const startEditingProgress = (id: string, currentProgress: number) => {
-    setEditingProgressId(id);
-    setEditProgressValue(currentProgress.toString());
+  // --- PROGRESS POPOVER HANDLERS ---
+  const openProgressPopover = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setProgressPopoverPos({
+      top: rect.bottom + 6,
+      left: Math.min(rect.left - 60, window.innerWidth - 260),
+    });
+    setProgressPopoverId(id);
   };
-  const saveEditingProgress = () => {
-    if (editingProgressId) {
-      let numValue = parseInt(editProgressValue, 10);
-      if (isNaN(numValue) || numValue < 0) numValue = 0;
-      if (numValue > 100) numValue = 100;
-      updateItem(editingProgressId, { progress: numValue });
+
+  const setProgress = (id: string, value: number) => {
+    const clamped = Math.max(0, Math.min(100, value));
+    updateItem(id, { progress: clamped });
+  };
+
+  const getProgressColor = (progress: number) => {
+    if (progress === 100) return { ring: 'text-emerald-500', bg: 'bg-emerald-500', bgLight: 'bg-emerald-500/15' };
+    if (progress >= 60) return { ring: 'text-blue-500', bg: 'bg-blue-500', bgLight: 'bg-blue-500/15' };
+    if (progress > 0) return { ring: 'text-amber-500', bg: 'bg-amber-500', bgLight: 'bg-amber-500/15' };
+    return { ring: 'text-neutral-700', bg: 'bg-neutral-700', bgLight: 'bg-neutral-800' };
+  };
+
+  // Helper to find an item's progress by id
+  const findItemProgress = (id: string): number => {
+    for (const item of items) {
+      if (item.id === id) return item.progress;
+      if (item.children) {
+        for (const child of item.children) {
+          if (child.id === id) return child.progress;
+        }
+      }
     }
-    setEditingProgressId(null);
-  };
-  const handleProgressKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") saveEditingProgress();
-    if (e.key === "Escape") setEditingProgressId(null);
+    return 0;
   };
 
   // --- HANDLERS: DRAG ---
@@ -435,7 +475,7 @@ export default function RoadmapView({
                 <ArrowLeft className="w-5 h-5" />
               </Link>
               <h1 className="text-2xl font-semibold text-neutral-100 flex items-center gap-3 tracking-tight">
-                Workspace Roadmap
+                Learning Journey
                 <button
                   onClick={() => setIsStarred(!isStarred)}
                   className={`transition-colors ${isStarred ? "text-yellow-500" : "text-neutral-600 hover:text-neutral-400"}`}
@@ -449,7 +489,7 @@ export default function RoadmapView({
                 onClick={addParentTask}
                 className="px-4 py-1.5 flex items-center gap-2 bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600/20 border border-emerald-500/20 transition rounded text-xs font-semibold shadow-sm"
               >
-                <Plus className="w-4 h-4" /> Add Release
+                <Plus className="w-4 h-4" /> Add Curriculum
               </button>
               <button
                 onClick={exportToCalendar}
@@ -472,10 +512,10 @@ export default function RoadmapView({
 
         <div className="flex-1 flex overflow-hidden bg-[#09090b]">
           {/* LEFT PANEL: Data Table */}
-          <div className="w-[350px] flex-shrink-0 border-r border-neutral-900 flex flex-col bg-[#09090b] z-10 shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
+          <div className="w-[400px] flex-shrink-0 border-r border-neutral-900 flex flex-col bg-[#09090b] z-10 shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
             <div className="flex text-[10px] text-neutral-500 border-b border-neutral-900 uppercase font-bold tracking-wider bg-neutral-950/40">
-              <div className="flex-1 p-3 pl-6">Release / Features</div>
-              <div className="w-[80px] p-3 text-right pr-6">Progress</div>
+              <div className="flex-1 p-3 pl-6">Curriculum / Topics</div>
+              <div className="w-[120px] p-3 text-center">Mastery Level</div>
             </div>
 
             <div className="overflow-y-auto flex-1 divide-y divide-neutral-900/40 custom-scrollbar pb-24">
@@ -483,10 +523,10 @@ export default function RoadmapView({
               {items.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-40 text-center px-6">
                   <p className="text-sm font-medium text-neutral-300">
-                    No releases yet
+                    No curriculum yet
                   </p>
                   <p className="text-xs text-neutral-500 mt-1">
-                    Click "Add Release" at the top to start planning.
+                    Click "Add Curriculum" at the top to start planning.
                   </p>
                 </div>
               )}
@@ -499,9 +539,9 @@ export default function RoadmapView({
                   <React.Fragment key={item.id}>
                     {/* PARENT ROW */}
                     <div className="flex h-[40px] items-center hover:bg-neutral-900/40 transition-colors group bg-[#09090b]">
-                      <div className="flex-1 px-4 pl-4 flex items-center gap-1">
+                      <div className="flex-1 min-w-0 px-4 pl-4 flex items-center gap-1">
                         <div
-                          className="w-5 h-5 flex items-center justify-center cursor-pointer text-neutral-500 hover:text-neutral-300 transition-colors rounded hover:bg-neutral-800"
+                          className="w-5 h-5 flex items-center justify-center cursor-pointer text-neutral-500 hover:text-neutral-300 transition-colors rounded hover:bg-neutral-800 shrink-0"
                           onClick={() => hasChildren && toggleExpand(item.id)}
                         >
                           {hasChildren ? (
@@ -514,38 +554,48 @@ export default function RoadmapView({
                             <Circle className="w-1.5 h-1.5 fill-neutral-700 text-transparent" />
                           )}
                         </div>
-                        {editingNameId === item.id ? (
-                          <input
-                            ref={nameInputRef}
-                            value={editNameValue}
-                            onChange={(e) => setEditNameValue(e.target.value)}
-                            onBlur={saveEditingName}
-                            onKeyDown={handleNameKeyDown}
-                            className="flex-1 bg-neutral-800 text-white text-xs px-2 py-0.5 rounded border border-neutral-600 focus:outline-none"
-                          />
-                        ) : (
-                          <span
-                            className="text-neutral-200 text-xs font-medium truncate cursor-text hover:text-white flex-1 pl-1"
-                            onDoubleClick={() =>
-                              startEditingName(item.id, item.name)
-                            }
-                          >
-                            {item.name}
-                          </span>
-                        )}
+                        
+                        <div className="flex-1 min-w-0 pr-2">
+                          {editingNameId === item.id ? (
+                            <input
+                              ref={nameInputRef}
+                              value={editNameValue}
+                              onChange={(e) => setEditNameValue(e.target.value)}
+                              onBlur={saveEditingName}
+                              onKeyDown={handleNameKeyDown}
+                              className="w-full bg-neutral-800 text-white text-xs px-2 py-0.5 rounded border border-neutral-600 focus:outline-none"
+                            />
+                          ) : (
+                            <span
+                              className="text-neutral-200 text-xs font-medium truncate cursor-text hover:text-white block w-full pl-1"
+                              onDoubleClick={() =>
+                                startEditingName(item.id, item.name)
+                              }
+                            >
+                              {item.name}
+                            </span>
+                          )}
+                        </div>
 
-                        {/* HOVER ACTIONS (Add Child & Delete) */}
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center pr-2 gap-1">
+                        {/* HOVER ACTIONS (Material, Add Child & Delete) */}
+                        <div className="w-[76px] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openMaterialPanel(item.name)}
+                            title="Lihat Materi"
+                            className="p-1 hover:bg-neutral-700 rounded text-neutral-400 hover:text-violet-400"
+                          >
+                            <BookOpenCheck className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={() => addChildTask(item.id)}
-                            title="Add Feature"
+                            title="Add Topic"
                             className="p-1 hover:bg-neutral-700 rounded text-neutral-400 hover:text-emerald-400"
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => deleteItem(item.id)}
-                            title="Delete Release"
+                            title="Delete Curriculum"
                             className="p-1 hover:bg-neutral-700 rounded text-neutral-400 hover:text-red-400"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -553,41 +603,40 @@ export default function RoadmapView({
                         </div>
                       </div>
 
-                      <div className="w-[80px] px-4 text-right pr-6 text-xs flex items-center justify-end gap-1.5 font-mono text-neutral-400">
-                        {item.progress > 0 && item.progress < 100 ? (
-                          <Circle className="w-3 h-3 text-blue-500 fill-blue-500/20" />
-                        ) : item.progress === 100 ? (
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                        ) : (
-                          <Circle className="w-3 h-3 text-neutral-700" />
-                        )}
-                        {editingProgressId === item.id ? (
-                          <div className="flex items-center w-12">
-                            <input
-                              ref={progressInputRef}
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={editProgressValue}
-                              onChange={(e) =>
-                                setEditProgressValue(e.target.value)
-                              }
-                              onBlur={saveEditingProgress}
-                              onKeyDown={handleProgressKeyDown}
-                              className="w-full bg-neutral-800 text-white text-xs px-1 py-0.5 rounded border border-neutral-600 focus:outline-none text-right"
+                      {/* PROGRESS CELL - Clickable Ring */}
+                      <div className="w-[120px] shrink-0 px-4 flex items-center gap-2.5">
+                        <button
+                          onClick={(e) => openProgressPopover(e, item.id)}
+                          className={`relative w-6 h-6 shrink-0 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-110 ${
+                            progressPopoverId === item.id ? 'ring-2 ring-offset-1 ring-offset-[#09090b] ring-neutral-500' : ''
+                          }`}
+                          title="Update mastery level"
+                        >
+                          <svg className="w-6 h-6 -rotate-90" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-neutral-800" />
+                            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                              className={`${getProgressColor(item.progress).ring} transition-all duration-500`}
+                              strokeDasharray={`${2 * Math.PI * 9}`}
+                              strokeDashoffset={`${2 * Math.PI * 9 * (1 - item.progress / 100)}`}
                             />
-                            <span className="ml-0.5">%</span>
-                          </div>
-                        ) : (
-                          <span
-                            className="cursor-text hover:text-white min-w-[20px]"
-                            onDoubleClick={() =>
-                              startEditingProgress(item.id, item.progress)
-                            }
-                          >
+                          </svg>
+                          {item.progress === 100 && (
+                            <CheckCircle2 className="w-2.5 h-2.5 absolute text-emerald-500" />
+                          )}
+                        </button>
+                        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                          <span className={`text-[11px] font-semibold tabular-nums leading-none ${
+                            item.progress === 100 ? 'text-emerald-400' : item.progress > 0 ? 'text-neutral-300' : 'text-neutral-600'
+                          }`}>
                             {item.progress}%
                           </span>
-                        )}
+                          <div className="w-full h-[3px] rounded-full bg-neutral-800 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${getProgressColor(item.progress).bg}`}
+                              style={{ width: `${item.progress}%` }}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -598,81 +647,85 @@ export default function RoadmapView({
                           key={child.id}
                           className="flex h-[40px] items-center bg-neutral-950/20 hover:bg-neutral-900/30 transition-colors group"
                         >
-                          <div className="flex-1 px-4 pl-12 flex items-center">
-                            {editingNameId === child.id ? (
-                              <input
-                                ref={nameInputRef}
-                                value={editNameValue}
-                                onChange={(e) =>
-                                  setEditNameValue(e.target.value)
-                                }
-                                onBlur={saveEditingName}
-                                onKeyDown={handleNameKeyDown}
-                                className="flex-1 bg-neutral-800 text-white text-xs px-2 py-0.5 rounded border border-neutral-600 focus:outline-none"
-                              />
-                            ) : (
-                              <div
-                                className="text-xs text-neutral-400 truncate cursor-text hover:text-neutral-200 flex-1 relative flex items-center justify-between"
-                                onDoubleClick={() =>
-                                  startEditingName(child.id, child.name)
-                                }
-                              >
-                                <div className="flex items-center flex-1">
+                          <div className="flex-1 min-w-0 px-4 pl-12 flex items-center">
+                            <div className="flex-1 min-w-0 pr-2">
+                              {editingNameId === child.id ? (
+                                <input
+                                  ref={nameInputRef}
+                                  value={editNameValue}
+                                  onChange={(e) =>
+                                    setEditNameValue(e.target.value)
+                                  }
+                                  onBlur={saveEditingName}
+                                  onKeyDown={handleNameKeyDown}
+                                  className="w-full bg-neutral-800 text-white text-xs px-2 py-0.5 rounded border border-neutral-600 focus:outline-none"
+                                />
+                              ) : (
+                                <div
+                                  className="text-xs text-neutral-400 truncate cursor-text hover:text-neutral-200 w-full relative flex items-center"
+                                  onDoubleClick={() =>
+                                    startEditingName(child.id, child.name)
+                                  }
+                                >
                                   <div className="absolute -left-3 top-1/2 w-2 h-px bg-neutral-800"></div>
                                   <div className="absolute -left-3 -top-6 bottom-1/2 w-px bg-neutral-800"></div>
                                   {child.name}
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
 
-                            {/* HOVER ACTIONS (Delete Child) */}
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center pr-2">
+                            {/* HOVER ACTIONS (Material & Delete Child) */}
+                            <div className="w-[52px] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => openMaterialPanel(child.name, item.name)}
+                                title="Lihat Materi"
+                                className="p-1 hover:bg-neutral-700 rounded text-neutral-400 hover:text-violet-400"
+                              >
+                                <BookOpenCheck className="w-3.5 h-3.5" />
+                              </button>
                               <button
                                 onClick={() => deleteItem(child.id, item.id)}
-                                title="Delete Feature"
+                                title="Delete Topic"
                                 className="p-1 hover:bg-neutral-700 rounded text-neutral-400 hover:text-red-400"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
-                          <div className="w-[80px] px-4 text-right pr-6 text-xs flex items-center justify-end gap-1.5 font-mono text-neutral-500">
-                            {child.progress > 0 && child.progress < 100 ? (
-                              <Circle className="w-3 h-3 text-blue-500 fill-blue-500/20" />
-                            ) : child.progress === 100 ? (
-                              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                            ) : (
-                              <Circle className="w-3 h-3 text-neutral-700" />
-                            )}
-                            {editingProgressId === child.id ? (
-                              <div className="flex items-center w-12">
-                                <input
-                                  ref={progressInputRef}
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  value={editProgressValue}
-                                  onChange={(e) =>
-                                    setEditProgressValue(e.target.value)
-                                  }
-                                  onBlur={saveEditingProgress}
-                                  onKeyDown={handleProgressKeyDown}
-                                  className="w-full bg-neutral-800 text-white text-xs px-1 py-0.5 rounded border border-neutral-600 focus:outline-none text-right"
+                          {/* PROGRESS CELL - Clickable Ring (Child) */}
+                          <div className="w-[120px] shrink-0 px-4 flex items-center gap-2.5">
+                            <button
+                              onClick={(e) => openProgressPopover(e, child.id)}
+                              className={`relative w-6 h-6 shrink-0 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-110 ${
+                                progressPopoverId === child.id ? 'ring-2 ring-offset-1 ring-offset-[#09090b] ring-neutral-500' : ''
+                              }`}
+                              title="Update mastery level"
+                            >
+                              <svg className="w-6 h-6 -rotate-90" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-neutral-800" />
+                                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                                  className={`${getProgressColor(child.progress).ring} transition-all duration-500`}
+                                  strokeDasharray={`${2 * Math.PI * 9}`}
+                                  strokeDashoffset={`${2 * Math.PI * 9 * (1 - child.progress / 100)}`}
                                 />
-                                <span className="ml-0.5 text-neutral-400">
-                                  %
-                                </span>
-                              </div>
-                            ) : (
-                              <span
-                                className="cursor-text hover:text-neutral-200 min-w-[20px]"
-                                onDoubleClick={() =>
-                                  startEditingProgress(child.id, child.progress)
-                                }
-                              >
+                              </svg>
+                              {child.progress === 100 && (
+                                <CheckCircle2 className="w-2.5 h-2.5 absolute text-emerald-500" />
+                              )}
+                            </button>
+                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                              <span className={`text-[11px] font-semibold tabular-nums leading-none ${
+                                child.progress === 100 ? 'text-emerald-400' : child.progress > 0 ? 'text-neutral-400' : 'text-neutral-600'
+                              }`}>
                                 {child.progress}%
                               </span>
-                            )}
+                              <div className="w-full h-[3px] rounded-full bg-neutral-800 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${getProgressColor(child.progress).bg}`}
+                                  style={{ width: `${child.progress}%` }}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -863,6 +916,90 @@ export default function RoadmapView({
           </div>
         </div>
       </main>
+
+      {/* Progress Popover (Portal-style, fixed position) */}
+      {progressPopoverId && (
+        <div
+          id="progress-popover"
+          className="fixed z-[60] animate-in fade-in slide-in-from-top-2 duration-200"
+          style={{ top: progressPopoverPos.top, left: progressPopoverPos.left }}
+        >
+          <div className="bg-[#141417] border border-neutral-800 rounded-xl shadow-2xl shadow-black/50 p-4 w-[240px]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Progress</span>
+              <span className={`text-lg font-bold tabular-nums ${
+                findItemProgress(progressPopoverId) === 100 ? 'text-emerald-400' :
+                findItemProgress(progressPopoverId) >= 60 ? 'text-blue-400' :
+                findItemProgress(progressPopoverId) > 0 ? 'text-amber-400' : 'text-neutral-500'
+              }`}>
+                {findItemProgress(progressPopoverId)}%
+              </span>
+            </div>
+
+            {/* Slider */}
+            <div className="relative mb-3">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={findItemProgress(progressPopoverId)}
+                onChange={(e) => setProgress(progressPopoverId, parseInt(e.target.value, 10))}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer bg-neutral-800
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-lg
+                  [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-neutral-400
+                  [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:transition-transform
+                  [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full
+                  [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-neutral-400"
+                style={{
+                  background: `linear-gradient(to right, ${findItemProgress(progressPopoverId) === 100 ? '#10b981' : findItemProgress(progressPopoverId) >= 60 ? '#3b82f6' : findItemProgress(progressPopoverId) > 0 ? '#f59e0b' : '#404040'} ${findItemProgress(progressPopoverId)}%, #262626 ${findItemProgress(progressPopoverId)}%)`
+                }}
+              />
+            </div>
+
+            {/* Quick action buttons */}
+            <div className="flex items-center justify-between gap-2">
+              <button
+                onClick={() => setProgress(progressPopoverId, Math.max(0, findItemProgress(progressPopoverId) - 10))}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex gap-1 flex-1 justify-center">
+                {[0, 25, 50, 75, 100].map((val) => (
+                  <button
+                    key={val}
+                    onClick={() => setProgress(progressPopoverId, val)}
+                    className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
+                      findItemProgress(progressPopoverId) === val
+                        ? 'bg-neutral-100 text-neutral-900 shadow-sm'
+                        : 'bg-neutral-800 text-neutral-500 hover:bg-neutral-700 hover:text-neutral-300'
+                    }`}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setProgress(progressPopoverId, Math.min(100, findItemProgress(progressPopoverId) + 10))}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Material Panel */}
+      <TaskMaterialPanel
+        isOpen={materialPanelOpen}
+        onClose={() => setMaterialPanelOpen(false)}
+        taskName={selectedTaskName}
+        parentName={selectedParentName}
+      />
     </div>
   );
 }

@@ -16,7 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FloatingHeader } from "@/components/layouts/floating-header";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -55,10 +55,7 @@ export default async function AdminPaymentsPage() {
   const estimatedRevenue = plusUsers.length * plusPrice + proUsers.length * proPrice;
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-neutral-200 font-sans antialiased">
-      <FloatingHeader />
-
-      <main className="mx-auto mt-28 max-w-7xl px-6 pb-12 animate-in fade-in duration-500">
+    <main className="w-full px-8 py-10 pb-12 animate-in fade-in duration-500">
         {/* Header */}
         <div className="mb-8 border-b border-neutral-900 pb-8">
           <div className="flex items-center justify-between">
@@ -296,6 +293,5 @@ export default async function AdminPaymentsPage() {
           </CardContent>
         </Card>
       </main>
-    </div>
   );
 }
