@@ -1,8 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-// @ts-ignore - midtrans-client does not have type definitions
-import Midtrans from "midtrans-client";
+// Use require to bypass TypeScript missing declaration errors for midtrans-client
+const Midtrans = require("midtrans-client");
 
 // Inisialisasi Midtrans Snap Client
 const snap = new Midtrans.Snap({
