@@ -12,7 +12,7 @@ export function DashboardSetup() {
     // Cek apakah ada parameter verified=true di URL
     if (searchParams.get("verified") === "true") {
       // Munculkan toast sukses
-      toast.success("Email berhasil diverifikasi!", {
+      toast.success("Email verified successfully!", {
         description: "Selamat datang di MindHub.",
       });
 

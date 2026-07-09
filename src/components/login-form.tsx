@@ -20,13 +20,24 @@ import Link from "next/link";
 import { useState } from "react";
 import { signIn } from "@/services/actions/auth";
 
+// Import client Supabase untuk browser (sesuaikan path-nya jika berbeda)
+import { createBrowserClient } from "@supabase/ssr";
+
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
 
+  // Inisialisasi Supabase Client khusus untuk komponen Client-side
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+
+  // Handler Login Biasa (Email/Password)
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
@@ -35,10 +46,28 @@ export function LoginForm({
     const formData = new FormData(event.currentTarget);
     const result = await signIn(formData);
 
-    // Jika terjadi error dari sisi Supabase, tangkap dan tampilkan ke UI
     if (result?.error) {
       setError(result.error);
       setIsLoading(false);
+    }
+  }
+
+  // Handler Login Google
+  async function handleGoogleLogin() {
+    setIsGoogleLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        // Arahkan ke rute callback yang akan kita buat setelah ini
+        redirectTo: `${location.origin}/api/auth/callback`,
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      setIsGoogleLoading(false);
     }
   }
 
@@ -68,7 +97,7 @@ export function LoginForm({
                   type="email"
                   placeholder="m@example.com"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                 />
               </Field>
               <Field>
@@ -86,16 +115,24 @@ export function LoginForm({
                   name="password"
                   type="password"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                 />
               </Field>
               <Field>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Memproses..." : "Masuk"}
+                <Button type="submit" disabled={isLoading || isGoogleLoading}>
+                  {isLoading ? "Processing..." : "Sign in"}
                 </Button>
-                <Button variant="outline" type="button">
-                  Login with Google
+
+                {/* Tombol Login Google yang sudah diaktifkan */}
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading || isGoogleLoading}
+                >
+                  {isGoogleLoading ? "Processing..." : "Sign in with Google"}
                 </Button>
+
                 <FieldDescription className="text-center">
                   Don&apos;t have an account?{" "}
                   <Link
