@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+// @ts-ignore - midtrans-client does not have type definitions
 import Midtrans from "midtrans-client";
 
 // Inisialisasi Midtrans Snap Client
