@@ -70,8 +70,15 @@ export async function inviteUserToWorkspace(workspaceId: string, email: string) 
       return { error: "Failed to create invitation. Please check your database setup." };
     }
 
+    // Dapatkan URL domain yang benar (Vercel atau Localhost)
+    const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      
     // Kirim Email menggunakan Resend
-    const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/invite?token=${token}`;
+    const inviteUrl = `${baseUrl}/api/invite?token=${token}`;
 
     if (!process.env.RESEND_API_KEY) {
       console.warn("=== RESEND_API_KEY NOT SET ===");
