@@ -14,8 +14,12 @@ export async function saveRoadmapData(workspaceId: string, roadmapData: any) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
+  // Gunakan Admin Client untuk semua query DB di bawah ini 
+  // agar tidak terhalang oleh Read RLS yang mungkin ketat untuk tabel workspaces/members
+  const adminClient = createAdminClient();
+
   // Verifikasi otorisasi: Apakah user ini owner atau member yang diundang?
-  const { data: workspace } = await supabase
+  const { data: workspace } = await adminClient
     .from("workspaces")
     .select("owner_id")
     .eq("id", workspaceId)
@@ -25,7 +29,7 @@ export async function saveRoadmapData(workspaceId: string, roadmapData: any) {
 
   if (!isAuthorized) {
     // Cek di tabel workspace_members jika bukan owner
-    const { data: member } = await supabase
+    const { data: member } = await adminClient
       .from("workspace_members")
       .select("id")
       .eq("workspace_id", workspaceId)
@@ -41,9 +45,7 @@ export async function saveRoadmapData(workspaceId: string, roadmapData: any) {
     return { error: "Forbidden: You don't have permission to edit this roadmap." };
   }
 
-  // Gunakan Admin Client untuk update tabel `workspaces`
-  // karena policy RLS default mungkin melarang member (bukan owner) untuk melakukan UPDATE pada row workspaces.
-  const adminClient = createAdminClient();
+  // Lakukan update dengan adminClient
   const { error } = await adminClient
     .from("workspaces")
     .update({ roadmap_data: roadmapData })
