@@ -43,16 +43,14 @@ export default async function AdminPaymentsPage() {
 
   // Simulate payment/subscription data from user table
   const premiumUsers = users.filter(
-    (u) => u.subscription_tier === "plus" || u.subscription_tier === "pro"
+    (u) => u.subscription_tier === "plus"
   );
 
   const plusUsers = users.filter((u) => u.subscription_tier === "plus");
-  const proUsers = users.filter((u) => u.subscription_tier === "pro");
 
   // Calculate revenue estimates based on pricing
   const plusPrice = 29000; // IDR
-  const proPrice = 79000; // IDR
-  const estimatedRevenue = plusUsers.length * plusPrice + proUsers.length * proPrice;
+  const estimatedRevenue = plusUsers.length * plusPrice;
 
   return (
     <main className="w-full px-8 py-10 pb-12 animate-in fade-in duration-500">
@@ -76,7 +74,7 @@ export default async function AdminPaymentsPage() {
         </div>
 
         {/* Revenue Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
           {/* Estimated Revenue */}
           <Card className="bg-gradient-to-br from-emerald-950/60 via-neutral-950 to-neutral-950 border-emerald-900/40 shadow-xl overflow-hidden relative">
             <div className="absolute -right-4 -top-4 text-emerald-500/10">
@@ -134,22 +132,6 @@ export default async function AdminPaymentsPage() {
             </CardContent>
           </Card>
 
-          {/* Pro Revenue */}
-          <Card className="bg-neutral-950/60 border-neutral-800/80 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-neutral-400">
-                Pro Tier
-              </CardTitle>
-              <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                <Receipt className="w-4 h-4 text-amber-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-amber-400">{proUsers.length}</div>
-              <p className="text-xs text-neutral-500 mt-2">
-                Rp {(proUsers.length * proPrice).toLocaleString("id-ID")}/mo
-              </p>
-            </CardContent>
           </Card>
         </div>
 
@@ -186,27 +168,6 @@ export default async function AdminPaymentsPage() {
                 </div>
               </div>
 
-              {/* Pro Tier Bar */}
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-neutral-400 flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    Pro Tier
-                  </span>
-                  <span className="text-neutral-300 font-medium">
-                    Rp {(proUsers.length * proPrice).toLocaleString("id-ID")}
-                  </span>
-                </div>
-                <div className="h-3 bg-neutral-900 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full transition-all duration-700"
-                    style={{
-                      width: estimatedRevenue > 0
-                        ? `${((proUsers.length * proPrice) / estimatedRevenue) * 100}%`
-                        : "0%",
-                    }}
-                  />
-                </div>
               </div>
             </div>
           </CardContent>
@@ -268,9 +229,7 @@ export default async function AdminPaymentsPage() {
                     {/* Plan */}
                     <div className="col-span-2 flex justify-center">
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md border flex items-center gap-1 ${
-                        u.subscription_tier === "pro"
-                          ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
-                          : "text-blue-400 bg-blue-500/10 border-blue-500/20"
+                        "text-blue-400 bg-blue-500/10 border-blue-500/20"
                       }`}>
                         <Sparkles className="w-3 h-3" />
                         {u.subscription_tier}

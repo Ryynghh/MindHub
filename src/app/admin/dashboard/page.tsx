@@ -96,8 +96,6 @@ export default async function AdminDashboard() {
     ).length || 0;
   const plusUsers =
     allUsers?.filter((u) => u.subscription_tier === "plus").length || 0;
-  const proUsers =
-    allUsers?.filter((u) => u.subscription_tier === "pro").length || 0;
 
   // Recent users (last 7 days)
   const sevenDaysAgo = new Date();
@@ -115,10 +113,8 @@ export default async function AdminDashboard() {
   const recentUsers = allUsers?.slice(0, 5) || [];
   const recentWorkspaces = allWorkspaces?.slice(0, 5) || [];
 
-  // Revenue estimates
   const plusPrice = 29000;
-  const proPrice = 79000;
-  const estimatedMRR = plusUsers * plusPrice + proUsers * proPrice;
+  const estimatedMRR = plusUsers * plusPrice;
 
   // ============================================================
   // CHART DATA: Process from real database records
@@ -130,7 +126,7 @@ export default async function AdminDashboard() {
     month: m.label,
     users: m.items.length,
     premium: m.items.filter(
-      (u) => u.subscription_tier === "plus" || u.subscription_tier === "pro"
+      (u) => u.subscription_tier === "plus"
     ).length,
   }));
 
@@ -146,7 +142,6 @@ export default async function AdminDashboard() {
   const tierDistributionData = [
     { name: "Free", value: freeUsers },
     { name: "Plus", value: plusUsers },
-    { name: "Pro", value: proUsers },
   ];
 
   // --- 4. Revenue Trend (last 6 months - estimated from user tiers per month) ---
@@ -159,12 +154,9 @@ export default async function AdminDashboard() {
     const plusCount = cumulativeUsers.filter(
       (u) => u.subscription_tier === "plus"
     ).length;
-    const proCount = cumulativeUsers.filter(
-      (u) => u.subscription_tier === "pro"
-    ).length;
     return {
       month: m.label,
-      revenue: plusCount * plusPrice + proCount * proPrice,
+      revenue: plusCount * plusPrice,
     };
   });
 
@@ -240,10 +232,10 @@ export default async function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-amber-500">
-              {plusUsers + proUsers}
+              {plusUsers}
             </div>
             <p className="text-xs text-neutral-500 mt-2">
-              {plusUsers} Plus · {proUsers} Pro
+              {plusUsers} Plus
             </p>
           </CardContent>
         </Card>
@@ -374,15 +366,6 @@ export default async function AdminDashboard() {
                 title={`Plus: ${plusUsers}`}
               />
             )}
-            {proUsers > 0 && (
-              <div
-                className="bg-amber-500 transition-all duration-700"
-                style={{
-                  width: `${(proUsers / (totalUsers || 1)) * 100}%`,
-                }}
-                title={`Pro: ${proUsers}`}
-              />
-            )}
           </div>
           <div className="flex gap-6 text-xs">
             <div className="flex items-center gap-2">
@@ -392,10 +375,6 @@ export default async function AdminDashboard() {
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-blue-500" />
               <span className="text-neutral-400">Plus ({plusUsers})</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-amber-500" />
-              <span className="text-neutral-400">Pro ({proUsers})</span>
             </div>
           </div>
         </CardContent>
@@ -458,9 +437,7 @@ export default async function AdminDashboard() {
                     </div>
                     <span
                       className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md border ${
-                        u.subscription_tier === "pro"
-                          ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
-                          : u.subscription_tier === "plus"
+                        u.subscription_tier === "plus"
                           ? "text-blue-400 bg-blue-500/10 border-blue-500/20"
                           : "text-neutral-500 bg-neutral-800/50 border-neutral-700/30"
                       }`}
