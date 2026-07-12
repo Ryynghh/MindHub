@@ -78,13 +78,13 @@ export default async function AdminUsersPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {[
             { label: "Free", count: users.filter((u) => !u.subscription_tier || u.subscription_tier === "free").length, color: "neutral" },
-            { label: "Plus", count: users.filter((u) => u.subscription_tier === "plus").length, color: "blue" },
+            { label: "Premium", count: users.filter((u) => u.subscription_tier === "plus").length, color: "amber" },
             { label: "This Week", count: users.filter((u) => { const d = new Date(); d.setDate(d.getDate() - 7); return new Date(u.created_at) >= d; }).length, color: "emerald" },
           ].map((stat) => (
             <div key={stat.label} className={`p-4 rounded-xl bg-neutral-950/60 border border-neutral-800/80 flex items-center justify-between`}>
               <span className="text-sm text-neutral-400">{stat.label}</span>
               <span className={`text-xl font-bold ${
-                stat.color === "blue" ? "text-blue-400" :
+                stat.color === "amber" ? "text-amber-400" :
                 stat.color === "emerald" ? "text-emerald-400" :
                 "text-white"
               }`}>{stat.count}</span>
@@ -156,10 +156,10 @@ export default async function AdminUsersPage() {
                     <div className="col-span-1 flex justify-center">
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border ${
                         u.subscription_tier === "plus"
-                          ? "text-blue-400 bg-blue-500/10 border-blue-500/20"
+                          ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
                           : "text-neutral-500 bg-neutral-800/50 border-neutral-700/30"
                       }`}>
-                        {u.subscription_tier || "Free"}
+                        {u.subscription_tier === "plus" ? "Premium" : "Free"}
                       </span>
                     </div>
 

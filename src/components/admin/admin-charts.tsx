@@ -154,7 +154,7 @@ export function WorkspaceCreationChart({
 // ============================================================
 // 3. Subscription Tier Pie Chart
 // ============================================================
-const TIER_COLORS = ["#525252", "#3b82f6", "#f59e0b"];
+const TIER_COLORS = ["#525252", "#f59e0b"];
 
 export function TierDistributionPieChart({
   data,

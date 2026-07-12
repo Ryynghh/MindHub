@@ -114,24 +114,22 @@ export default async function AdminPaymentsPage() {
             </CardContent>
           </Card>
 
-          {/* Plus Revenue */}
+          {/* Premium Revenue */}
           <Card className="bg-neutral-950/60 border-neutral-800/80 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-neutral-400">
-                Plus Tier
+                Premium Tier
               </CardTitle>
-              <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                <Receipt className="w-4 h-4 text-blue-400" />
+              <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                <Receipt className="w-4 h-4 text-amber-400" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-400">{plusUsers.length}</div>
+              <div className="text-3xl font-bold text-amber-400">{plusUsers.length}</div>
               <p className="text-xs text-neutral-500 mt-2">
                 Rp {(plusUsers.length * plusPrice).toLocaleString("id-ID")}/mo
               </p>
             </CardContent>
-          </Card>
-
           </Card>
         </div>
 
@@ -145,12 +143,12 @@ export default async function AdminPaymentsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Plus Tier Bar */}
+              {/* Premium Tier Bar */}
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-neutral-400 flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                    Plus Tier
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    Premium Tier
                   </span>
                   <span className="text-neutral-300 font-medium">
                     Rp {(plusUsers.length * plusPrice).toLocaleString("id-ID")}
@@ -158,7 +156,7 @@ export default async function AdminPaymentsPage() {
                 </div>
                 <div className="h-3 bg-neutral-900 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-700"
+                    className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full transition-all duration-700"
                     style={{
                       width: estimatedRevenue > 0
                         ? `${((plusUsers.length * plusPrice) / estimatedRevenue) * 100}%`
@@ -166,8 +164,6 @@ export default async function AdminPaymentsPage() {
                     }}
                   />
                 </div>
-              </div>
-
               </div>
             </div>
           </CardContent>
@@ -229,10 +225,10 @@ export default async function AdminPaymentsPage() {
                     {/* Plan */}
                     <div className="col-span-2 flex justify-center">
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md border flex items-center gap-1 ${
-                        "text-blue-400 bg-blue-500/10 border-blue-500/20"
+                        "text-amber-400 bg-amber-500/10 border-amber-500/20"
                       }`}>
                         <Sparkles className="w-3 h-3" />
-                        {u.subscription_tier}
+                        {u.subscription_tier === "plus" ? "Premium" : u.subscription_tier}
                       </span>
                     </div>
 

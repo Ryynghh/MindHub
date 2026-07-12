@@ -141,7 +141,7 @@ export default async function AdminDashboard() {
   // --- 3. Tier Distribution (Pie Chart) ---
   const tierDistributionData = [
     { name: "Free", value: freeUsers },
-    { name: "Plus", value: plusUsers },
+    { name: "Premium", value: plusUsers },
   ];
 
   // --- 4. Revenue Trend (last 6 months - estimated from user tiers per month) ---
@@ -235,7 +235,7 @@ export default async function AdminDashboard() {
               {plusUsers}
             </div>
             <p className="text-xs text-neutral-500 mt-2">
-              {plusUsers} Plus
+              {plusUsers} Premium
             </p>
           </CardContent>
         </Card>
@@ -359,11 +359,11 @@ export default async function AdminDashboard() {
             )}
             {plusUsers > 0 && (
               <div
-                className="bg-blue-500 transition-all duration-700"
+                className="bg-amber-500 transition-all duration-700"
                 style={{
                   width: `${(plusUsers / (totalUsers || 1)) * 100}%`,
                 }}
-                title={`Plus: ${plusUsers}`}
+                title={`Premium: ${plusUsers}`}
               />
             )}
           </div>
@@ -373,8 +373,8 @@ export default async function AdminDashboard() {
               <span className="text-neutral-400">Free ({freeUsers})</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-blue-500" />
-              <span className="text-neutral-400">Plus ({plusUsers})</span>
+              <span className="w-3 h-3 rounded-full bg-amber-500" />
+              <span className="text-neutral-400">Premium ({plusUsers})</span>
             </div>
           </div>
         </CardContent>
@@ -438,11 +438,11 @@ export default async function AdminDashboard() {
                     <span
                       className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md border ${
                         u.subscription_tier === "plus"
-                          ? "text-blue-400 bg-blue-500/10 border-blue-500/20"
+                          ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
                           : "text-neutral-500 bg-neutral-800/50 border-neutral-700/30"
                       }`}
                     >
-                      {u.subscription_tier || "Free"}
+                      {u.subscription_tier === "plus" ? "Premium" : "Free"}
                     </span>
                   </div>
                 ))}
