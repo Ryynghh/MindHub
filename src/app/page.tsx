@@ -28,8 +28,9 @@ export default function Home() {
             </span>
           </div>
 
-          <h1 className="bg-gradient-to-br from-white via-neutral-200 to-neutral-600 bg-clip-text text-8xl font-black tracking-tighter text-transparent sm:text-9xl mb-6">
-            MindHub
+          <h1 className="font-[family-name:var(--font-outfit)] text-5xl font-bold tracking-tight text-white sm:text-7xl mb-6 leading-[1.1]">
+            Structure your learning<br className="hidden sm:block" />
+             journey with <span className="bg-gradient-to-br from-white via-neutral-200 to-neutral-500 bg-clip-text text-transparent">MindHub</span>.
           </h1>
 
           <p className="mx-auto max-w-2xl text-lg tracking-tight text-neutral-400 sm:text-xl leading-relaxed mb-10">
