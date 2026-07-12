@@ -28,7 +28,7 @@ export default function Home() {
             </span>
           </div>
 
-          <h1 className="bg-gradient-to-br from-white via-neutral-200 to-neutral-600 bg-clip-text text-7xl font-bold tracking-tight text-transparent sm:text-7xl mb-6">
+          <h1 className="bg-gradient-to-br from-white via-neutral-200 to-neutral-600 bg-clip-text text-8xl font-black tracking-tighter text-transparent sm:text-9xl mb-6">
             MindHub
           </h1>
 
